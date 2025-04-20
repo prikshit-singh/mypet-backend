@@ -1,5 +1,6 @@
 import express,{Request,Response} from 'express';
 import dotenv from 'dotenv';
+import { errorHandler } from './middleware/errorHandler';
 import connectDB from './config/db';
 import routes from './routes';
 import authRoutes from './routes/auth.routes'
@@ -32,6 +33,8 @@ app.use((req, res) => {
       },
     });
   });
+
+  app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

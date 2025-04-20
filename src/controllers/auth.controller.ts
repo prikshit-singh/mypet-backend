@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Request, Response,NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
+import validateRequiredFields from '../utils/validateRequiredFields';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 const JWT_EXPIRES_IN = '7d'; // Token validity
@@ -10,8 +11,21 @@ const generateToken = (userId: string) =>
     jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
 // ✅ Signup
-export const signup = async (req: Request, res: Response) => {
+export const signup = async (req: Request, res: Response, next: NextFunction) => {
     try {
+
+
+        const requiredFields = ['name', 'email', 'password', 'role'];
+        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+
+        if (!success) {
+            res.status(400).json({
+                success: false,
+                message: `Missing required fields: ${missingFields?.join(', ')}`,
+            });
+            return
+        }
+
         const { name, email, password, role } = req.body;
 
         const existing = await User.findOne({ email });
@@ -23,13 +37,25 @@ export const signup = async (req: Request, res: Response) => {
         const token = generateToken(user._id.toString());
         res.status(201).json({ token, user });
     } catch (err) {
-        res.status(500).json({ error: 'Signup failed', details: err });
+        next(err)
     }
 };
 
 // ✅ Login
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
+
+        const requiredFields = ['email', 'password'];
+        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+
+        if (!success) {
+            res.status(400).json({
+                success: false,
+                message: `Missing required fields: ${missingFields?.join(', ')}`,
+            });
+            return
+        }
+
         const { email, password } = req.body;
 
         const user = await User.findOne({ email });
@@ -49,6 +75,6 @@ export const login = async (req: Request, res: Response) => {
         const token = generateToken(user._id.toString());
         res.status(200).json({ token, user });
     } catch (err) {
-        res.status(500).json({ error: 'Login failed', details: err });
+        next(err)
     }
 };
