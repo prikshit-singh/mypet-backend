@@ -1,0 +1,54 @@
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import User, { IUser } from '../models/User';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+const JWT_EXPIRES_IN = '7d'; // Token validity
+
+// Generate token
+const generateToken = (userId: string) =>
+    jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+// ✅ Signup
+export const signup = async (req: Request, res: Response) => {
+    try {
+        const { name, email, password, role } = req.body;
+
+        const existing = await User.findOne({ email });
+        if (existing) {
+            res.status(400).json({ error: 'Email already in use' })
+            return
+        };
+        const user: IUser = await User.create({ name, email, password, role });
+        const token = generateToken(user._id.toString());
+        res.status(201).json({ token, user });
+    } catch (err) {
+        res.status(500).json({ error: 'Signup failed', details: err });
+    }
+};
+
+// ✅ Login
+export const login = async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+
+        const user = await User.findOne({ email });
+        if (!user) {
+
+            res.status(400).json({ error: 'Invalid credentials' });
+            return
+        };
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+
+            res.status(400).json({ error: 'Invalid credentials' });
+            return
+        };
+
+        const token = generateToken(user._id.toString());
+        res.status(200).json({ token, user });
+    } catch (err) {
+        res.status(500).json({ error: 'Login failed', details: err });
+    }
+};
