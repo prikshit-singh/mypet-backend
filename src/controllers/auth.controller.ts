@@ -20,6 +20,7 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
 
         if (!success) {
             res.status(400).json({
+                status:400,
                 success: false,
                 message: `Missing required fields: ${missingFields?.join(', ')}`,
             });
@@ -30,12 +31,13 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
 
         const existing = await User.findOne({ email });
         if (existing) {
-            res.status(400).json({ error: 'Email already in use' })
+            
+            res.status(400).json({status:400, error: 'Email already in use' })
             return
         };
         const user: IUser = await User.create({ name, email, password, role });
         const token = generateToken(user._id.toString());
-        res.status(201).json({ token, user });
+        res.status(201).json({status:201, token, user });
     } catch (err) {
         next(err)
     }
@@ -50,6 +52,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         if (!success) {
             res.status(400).json({
+                status:400,
                 success: false,
                 message: `Missing required fields: ${missingFields?.join(', ')}`,
             });
@@ -61,19 +64,19 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         const user = await User.findOne({ email });
         if (!user) {
 
-            res.status(400).json({ error: 'Invalid credentials' });
+            res.status(400).json({status:400, error: 'Invalid credentials' });
             return
         };
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
 
-            res.status(400).json({ error: 'Invalid credentials' });
+            res.status(400).json({status:400, error: 'Invalid credentials' });
             return
         };
 
         const token = generateToken(user._id.toString());
-        res.status(200).json({ token, user });
+        res.status(200).json({status:200, token, user });
     } catch (err) {
         next(err)
     }
