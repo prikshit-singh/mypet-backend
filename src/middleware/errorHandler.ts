@@ -8,7 +8,8 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   const mongooseError = handleMongooseError(err);
-  res.status(mongooseError.statusCode).json({
+  res.status(mongooseError.status).json({
+    status:mongooseError.status,
     success: false,
     message: mongooseError.message,
     errors: mongooseError.errors,
