@@ -5,6 +5,7 @@ import connectDB from './config/db';
 import routes from './routes';
 import authRoutes from './routes/auth.routes'
 import docsRoutes from './routes/docs.routes';
+import cors from 'cors'
 // Load env variables
 dotenv.config();
 
@@ -15,6 +16,7 @@ const app = express();
 
 // Middlewares
 app.use(express.json()); // Parse JSON request bodies
+app.use(cors())
 app.get('/',(req:Request,res:Response)=>{
     res.send({message:"hello world"})
 })
