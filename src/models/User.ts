@@ -8,11 +8,12 @@ export interface IUser extends Document {
   avatar: string;
   password: string;
   role: 'individual' | 'pet_shop' | 'shelter';
+  otp?:number;
   isVerified: boolean;
   joinedAt: string;
   bio: string;
   phone?: string;
-  rating: number;
+  rating: number|null;
   addresses: Types.ObjectId[]; // references Address
   licenseNumber?: string;
   establishmentYear?: string;
@@ -30,6 +31,7 @@ const userSchema = new Schema<IUser>({
   avatar: { type: String, default: '' },
   password: { type: String, required: true },
   role: { type: String, enum: ['individual', 'pet_shop', 'shelter'], required: true },
+  otp:{type:Number,min:100000,max:999999,default:null},
   isVerified: { type: Boolean, default: false },
   joinedAt: { type: String, default: () => new Date().toISOString() },
   bio: { type: String, default: '' },
