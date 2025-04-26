@@ -93,6 +93,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 
+
 export const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
@@ -189,3 +190,42 @@ export const generateOTP = (): number => {
     return Math.floor(100000 + Math.random() * 900000);
   };
   
+
+export const getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // req.user should be set by your auth middleware
+
+console.log((req as any).user)
+
+      const userId = (req as any).user?.id;
+  
+      if (!userId) {
+         res.status(401).json({
+          status: 401,
+          success: false,
+          message: 'Unauthorized: No user ID found',
+        });
+        return
+      }
+  
+      const user = await User.findById(userId).select('-password'); // Don't send password
+  
+      if (!user) {
+         res.status(404).json({
+          status: 404,
+          success: false,
+          message: 'User not found',
+        });
+        return
+      }
+  
+      res.status(200).json({
+        status: 200,
+        success: true,
+        user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
