@@ -1,41 +1,78 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Address from '../models/Address';
 import User from '../models/User';
+import validateRequiredFields from '../utils/validateRequiredFields';
 import { Types } from 'mongoose';
 
 // ✅ CREATE Address
-export const createUserAddress = async (req: Request, res: Response) => {
+export const createUserAddress = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, street, city, state, postalCode, country, label } = req.body;
+
+    const requiredFields = ['street', 'city', 'state', 'postalCode'];
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
+    }
+
+    const { street, city, state, postalCode, country, label, isDefault } = req.body;
+    const { id, userType } = (req as any).user;
+
+
+
+    // 👉 If the new address is default, update all previous addresses to isDefault: false
+    if (isDefault) {
+      await Address.updateMany(
+        { userId: id },
+        { $set: { isDefault: false } }
+      );
+    }
 
     const address = await Address.create({
-      userId,
+      userId: id,
       street,
       city,
       state,
       postalCode,
-      country,
-      label,
+      country: country ? country : "INDIA",
+      label: label ? label : userType,
+      isDefault: isDefault ? isDefault : false
     });
 
-    await User.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(id, {
       $push: { addresses: address._id },
     });
 
-    res.status(201).json(address);
+    res.status(201).json({
+      status: 400,
+      success: false,
+      message: `Address saved successfully.`,
+      data: address
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create address', details: error });
+    next(error)
   }
 };
 
 // ✅ GET all addresses for a user
-export const getUserAddresses = async (req: Request, res: Response) => {
+export const getUserAddresses = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId } = req.params;
-    const addresses = await Address.find({ userId });
-    res.json(addresses);
+    const { id } = (req as any).user;
+    const addresses = await Address.find({ userId: id }).sort({ isDefault: -1 });
+    res.status(200).json({
+      status: 400,
+      success: true,
+      message: `Address fetched successfully.`,
+      data: addresses
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch addresses', details: error });
+    next(error)
+
   }
 };
 
@@ -43,11 +80,15 @@ export const getUserAddresses = async (req: Request, res: Response) => {
 export const getAddressById = async (req: Request, res: Response) => {
   try {
     const address = await Address.findById(req.params.id);
-    if (!address){
+    if (!address) {
       res.status(404).json({ error: 'Address not found' });
-    return
+      return
 
-    }  
+    }
+
+    const { id, userType } = (req as any).user;
+
+
     res.status(200).json(address);
     return
   } catch (error) {
@@ -56,21 +97,50 @@ export const getAddressById = async (req: Request, res: Response) => {
 };
 
 // ✅ UPDATE address
-export const updateUserAddress = async (req: Request, res: Response) => {
+export const updateUserAddress = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const updated = await Address.findByIdAndUpdate(req.params.id, req.body, {
+
+
+    const requiredFields = ['street', 'city', 'state', 'postalCode', 'country', 'isDefault'];
+    console.log(requiredFields, req.body)
+
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+    console.log(missingFields, success)
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
+    }
+
+    const { street, city, state, postalCode, country, label, isDefault } = req.body;
+    const { id, userType } = (req as any).user;
+
+
+
+    // 👉 If the new address is default, update all previous addresses to isDefault: false
+    if (isDefault) {
+      await Address.updateMany(
+        { userId: id },
+        { $set: { isDefault: false } }
+      );
+    }
+
+    const updated = await Address.findByIdAndUpdate(req.params.id, { street, city, state, postalCode, country, label, isDefault }, {
       new: true,
     });
-    
-    if (!updated){
-      res.status(404).json({ error: 'Address not found' });
-    return
 
-    } 
-    
+    if (!updated) {
+      res.status(404).json({ error: 'Address not found' });
+      return
+
+    }
+
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update address', details: error });
+    next(error);
   }
 };
 
@@ -78,11 +148,11 @@ export const updateUserAddress = async (req: Request, res: Response) => {
 export const deleteUserAddress = async (req: Request, res: Response) => {
   try {
     const address = await Address.findByIdAndDelete(req.params.id);
-    if (!address){
+    if (!address) {
       res.status(404).json({ error: 'Address not found' });
-    return
+      return
 
-    } 
+    }
     await User.findByIdAndUpdate(address.userId, {
       $pull: { addresses: address._id },
     });

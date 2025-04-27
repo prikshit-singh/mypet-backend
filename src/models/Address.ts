@@ -8,6 +8,7 @@ export interface IAddress extends Document {
   postalCode?: string;
   country?: string;
   label?: string;
+  isDefault?:boolean;
 }
 
 const addressSchema = new Schema<IAddress>({
@@ -18,6 +19,7 @@ const addressSchema = new Schema<IAddress>({
   postalCode: String,
   country: String,
   label: String,
+  isDefault:{type:Boolean,default:false}
 });
 
 const Address = model<IAddress>('Address', addressSchema);

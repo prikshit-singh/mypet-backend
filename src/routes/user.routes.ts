@@ -7,12 +7,12 @@ import {
   deleteUser,
 } from '../controllers/user.controller';
 
-const router = express.Router();
+const userRouter = express.Router();
 
-// router.post('/', createUser); // Create user
-// router.get('/', getAllUsers); // Get all users
-// router.get('/:id', getUserById); // Get single user
-// router.put('/:id', updateUser); // Update user
-// router.delete('/:id', deleteUser); // Delete user
+// userRouter.post('/', createUser); // Create user
+// userRouter.get('/', getAllUsers); // Get all users
+// userRouter.get('/:id', getUserById); // Get single user
+// userRouter.put('/:id', updateUser); // Update user
+// userRouter.delete('/:id', deleteUser); // Delete user
 
-export default router;
+export default userRouter;

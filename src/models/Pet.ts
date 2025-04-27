@@ -11,19 +11,23 @@ export interface IPet extends Document {
   description: string;
   purpose: 'adopt' | 'sell' | 'breed';
   price?: number;
-  city: string;
   vaccinated: boolean;
   images: string[];
   createdAt: string;
-
   owner: Types.ObjectId; // Reference to User
   ownerVerified: boolean;
-
-  addresses: Types.ObjectId[]; // Reference to PetAddresses
-
+  address: Types.ObjectId;
+  breedingExperience?:string;
+  careAdvice?:string;
+  healthInfo?:string;
+  microchipped?:boolean;
+  neutered?:boolean;
+  // Reference to PetAddress
   // optional: if you later define AdoptionRequest[]
   // adoptionRequests?: Types.ObjectId[];
 }
+
+
 
 const petSchema = new Schema<IPet>({
   name: { type: String, required: true },
@@ -38,15 +42,17 @@ const petSchema = new Schema<IPet>({
   description: { type: String, required: true },
   purpose: { type: String, enum: ['adopt', 'sell', 'breed'], required: true },
   price: Number,
-  city: { type: String, required: true },
   vaccinated: { type: Boolean, default: false },
   images: [String],
   createdAt: { type: String, default: () => new Date().toISOString() },
-
   owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   ownerVerified: { type: Boolean, default: false },
-
-  addresses: [{ type: Schema.Types.ObjectId, ref: 'PetAddress' }],
+  address: { type: Schema.Types.ObjectId, ref: 'Address' },
+  breedingExperience: { type: String, required: false },
+  careAdvice: { type: String, required: false },
+  healthInfo: { type: String, required: false },
+  microchipped: { type: Boolean, default: false },
+  neutered: { type: Boolean, default: false },
 });
 
 const Pet = model<IPet>('Pet', petSchema);

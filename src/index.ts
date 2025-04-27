@@ -5,6 +5,9 @@ import connectDB from './config/db';
 import routes from './routes';
 import authRoutes from './routes/auth.routes'
 import docsRoutes from './routes/docs.routes';
+import userAddressRoute from './routes/userAddress.routes';
+import petRouter from './routes/pet.routes';
+import path from 'path';
 import cors from 'cors'
 // Load env variables
 dotenv.config();
@@ -17,6 +20,7 @@ const app = express();
 // Middlewares
 app.use(express.json()); // Parse JSON request bodies
 app.use(cors())
+app.use('/api/petimages', express.static(path.join(__dirname,  '../petimages')));
 app.get('/',(req:Request,res:Response)=>{
     res.send({message:"hello world"})
 })
@@ -24,6 +28,8 @@ app.get('/',(req:Request,res:Response)=>{
 app.use('/api', routes);
 app.use('/api/docs', docsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/address', userAddressRoute);
+app.use('/api/pet', petRouter);
 console.log('hello')
 app.use((req, res) => {
     res.status(404).json({

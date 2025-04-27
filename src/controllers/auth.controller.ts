@@ -33,7 +33,7 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
         const existing = await User.findOne({ email });
         if (existing) {
 
-            res.status(400).json({ status: 400, success: false, error: 'Email already in use' })
+            res.status(400).json({ status: 400, success: false, message: 'Email already in use' })
             return
         };
 
@@ -69,19 +69,19 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         const user = await User.findOne({ email });
         if (!user) {
 
-            res.status(400).json({ status: 400, success: false, error: 'Invalid credentials' });
+            res.status(400).json({ status: 400, success: false, message: 'Invalid credentials' });
             return
         };
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
 
-            res.status(400).json({ status: 400, success: false, error: 'Invalid credentials' });
+            res.status(400).json({ status: 400, success: false, message: 'Invalid credentials' });
             return
         };
 
         if(!user.isVerified){
-            res.status(400).json({ status: 400, success: false, error: 'Email not verified' });
+            res.status(400).json({ status: 400, success: false, message: 'Email not verified' });
             return 
         }
 
@@ -113,11 +113,11 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
 
         const user = await User.findOne({ email });
         if (!user) {
-            res.status(400).json({ status: 400, success: false, error: 'Invalid email' });
+            res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
             return
         };
         if(otp !== user.otp){
-            res.status(400).json({ status: 400, success: false, error: 'Invalid otp' });
+            res.status(400).json({ status: 400, success: false, message: 'Invalid otp' });
             return 
         }
         const userUpdate = await User.findOneAndUpdate({ email },{isVerified:true,otp:null});
@@ -148,7 +148,7 @@ export const sendOtpController = async (req: Request, res: Response) => {
         const { email } = req.body;
         const user = await User.findOne({ email });
         if (!user) {
-            res.status(400).json({ status: 400, success: false, error: 'Invalid email' });
+            res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
             return
         };
 
@@ -158,7 +158,7 @@ export const sendOtpController = async (req: Request, res: Response) => {
         const result = await sendEmail({ email, name:user.name, subject: "Email verification" as string, htmlContent });
         res.status(200).json({ message: 'Email sent', data: result });
     } catch (error: any) {
-        res.status(500).json({ error: error.message || 'Failed to send email' });
+        res.status(500).json({ message: error.message || 'Failed to send email' });
     }
 };
 

@@ -8,12 +8,12 @@ import {
   deleteUserAddress,
 } from '../controllers/userAddress.controller';
 
-const userrAddressRoute = express.Router();
+const userAddressRoute = express.Router();
 
-userrAddressRoute.post('/',authenticateToken, createUserAddress);
-userrAddressRoute.get('/user/:userId',authenticateToken, getUserAddresses);
-userrAddressRoute.get('/:id',authenticateToken, getAddressById);
-userrAddressRoute.put('/:id',authenticateToken, updateUserAddress);
-userrAddressRoute.delete('/:id',authenticateToken, deleteUserAddress);
+userAddressRoute.post('/create-address',authenticateToken, createUserAddress);
+userAddressRoute.get('/get-address',authenticateToken, getUserAddresses);
+userAddressRoute.get('/:id',authenticateToken, getAddressById);
+userAddressRoute.put('/:id',authenticateToken, updateUserAddress);
+userAddressRoute.delete('/:id',authenticateToken, deleteUserAddress);
 
-export default userrAddressRoute;
+export default userAddressRoute;

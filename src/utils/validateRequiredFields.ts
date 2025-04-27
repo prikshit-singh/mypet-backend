@@ -1,19 +1,19 @@
- function validateRequiredFields(
-    fields: string[],
-    body: Record<string, any>
-  ): { success: boolean; missingFields?: string[] } {
-    const missingFields = fields.filter(field => !body[field]);
-  
-    if (missingFields.length > 0) {
-      return {
-        success: false,
-        missingFields,
-      };
-    }
-  
+function validateRequiredFields(
+  fields: string[],
+  body: Record<string, any>
+): { success: boolean; missingFields?: string[] } {
+  const missingFields = fields.filter(field => body[field] === undefined);
+
+  if (missingFields.length > 0) {
     return {
-      success: true,
+      success: false,
+      missingFields,
     };
   }
 
-  export default validateRequiredFields
+  return {
+    success: true,
+  };
+}
+
+export default validateRequiredFields;

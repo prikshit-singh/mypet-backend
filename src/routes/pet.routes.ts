@@ -6,13 +6,14 @@ import {
   updatePet,
   deletePet,
 } from '../controllers/pet.controller';
+import authenticateToken from '../middleware/auth';
+import upload from '../utils/uploadFiles';
+const petRouter = express.Router();
 
-const router = express.Router();
+petRouter.post('/create-pet',authenticateToken , upload.array('images', 8), createPet); // Create pet
+petRouter.get('/', getAllPets); // Get all pets
+// petRouter.get('/:id', getPetById); // Get pet by ID
+// petRouter.put('/:id', updatePet); // Update pet
+// petRouter.delete('/:id', deletePet); // Delete pet
 
-router.post('/', createPet); // Create pet
-router.get('/', getAllPets); // Get all pets
-// router.get('/:id', getPetById); // Get pet by ID
-// router.put('/:id', updatePet); // Update pet
-// router.delete('/:id', deletePet); // Delete pet
-
-export default router;
+export default petRouter;
