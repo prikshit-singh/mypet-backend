@@ -39,7 +39,7 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
 
         const otp = generateOTP()
         const htmlContent = generateHtml(otp)
-        const user: IUser = await User.create({ name, email, password, role,otp });
+        const user: IUser = await User.create({ name, email, password, role,otp, });
 
         const result = await sendEmail({ email, name, subject: "Email verification" as string, htmlContent });
         res.status(201).json({ status: 201, success: true, result, message: 'Otp send to your email.' });
