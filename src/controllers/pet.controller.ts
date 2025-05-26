@@ -6,7 +6,9 @@ import FavouritePet from '../models/FavroutePets';
 import { AuthRequest } from '../middleware/auth';
 import Rating from '../models/Rating';
 import User from '../models/User';
-
+import dotenv from 'dotenv';
+// Load env variables
+dotenv.config();
 
 export const createPet = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -34,7 +36,7 @@ export const createPet = async (req: Request, res: Response, next: NextFunction)
       return;
     }
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
-      return `http://localhost:4000/api/petimages/${file.filename}`;
+      return `${process.env.BASE_URL}/api/petimages/${file.filename}`;
     }) || [];
 
 
@@ -253,7 +255,7 @@ export const updatePet = async (req: Request, res: Response, next: NextFunction)
       return;
     }
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
-      return `http://localhost:4000/api/petimages/${file.filename}`;
+      return `${process.env.BASE_URL}/api/petimages/${file.filename}`;
     }) || [];
 
     const existingPet = await Pet.findById(req.params.id);
