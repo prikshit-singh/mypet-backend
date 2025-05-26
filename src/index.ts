@@ -13,7 +13,7 @@ import cors from 'cors'
 dotenv.config();
 
 // Connect to MongoDB
-connectDB();
+//connectDB();
 
 const app = express();
 
@@ -21,15 +21,15 @@ const app = express();
 app.use(express.json()); // Parse JSON request bodies
 app.use(cors())
 app.use('/api/petimages', express.static(path.join(__dirname,  '../petimages')));
-app.get('/',(req:Request,res:Response)=>{
+app.get('/api',(req:Request,res:Response)=>{
     res.send({message:"hello world"})
 })
 // // Routes
-app.use('/api', routes);
-app.use('/api/docs', docsRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/address', userAddressRoute);
-app.use('/api/pet', petRouter);
+//app.use('/api', routes);
+//app.use('/api/docs', docsRoutes);
+//app.use('/api/auth', authRoutes);
+//app.use('/api/address', userAddressRoute);
+//app.use('/api/pet', petRouter);
 console.log('hello')
 app.use((req, res) => {
     res.status(404).json({
