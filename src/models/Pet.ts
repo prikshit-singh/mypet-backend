@@ -53,7 +53,7 @@ const petSchema = new Schema<IPet>({
   healthInfo: { type: String, required: false },
   microchipped: { type: Boolean, default: false },
   neutered: { type: Boolean, default: false },
-});
+},{timestamps:true});
 
 const Pet = model<IPet>('Pet', petSchema);
 export default Pet;

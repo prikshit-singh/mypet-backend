@@ -12,7 +12,6 @@ dotenv.config();
 
 export const createPet = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(req.files);
 
     const requiredFields = [
       'name',
@@ -24,7 +23,6 @@ export const createPet = async (req: Request, res: Response, next: NextFunction)
       'purpose',
       'address'
     ];
-    console.log(123, req, req.body)
     const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
 
     if (!success) {
@@ -152,8 +150,7 @@ export const getPetById = async (req: Request, res: Response, next: NextFunction
 
 export const getPetByUserId = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-
-    let pet: any = await Pet.find({ userId: req.user._id }).populate('address');
+    let pet: any = await Pet.find({ owner: req.user.id }).populate('address');
     if (!pet) {
       res.status(404).json({
         status: 404,
@@ -260,15 +257,15 @@ export const updatePet = async (req: Request, res: Response, next: NextFunction)
 
     const existingPet = await Pet.findById(req.params.id);
 
-if (!existingPet) {
-   res.status(404).json({ message: 'Pet not found' });
-   return
-}
+    if (!existingPet) {
+      res.status(404).json({ message: 'Pet not found' });
+      return
+    }
 
-const updatedImages = [...(existingPet.images || []), ...imageUrls];
+    const updatedImages = [...(existingPet.images || []), ...imageUrls];
 
 
-    const pet = await Pet.findByIdAndUpdate(req.params.id, {...req.body,images: updatedImages}, { new: true }).populate('address');
+    const pet = await Pet.findByIdAndUpdate(req.params.id, { ...req.body, images: updatedImages }, { new: true }).populate('address');
 
     if (!pet) {
       res.status(404).json({

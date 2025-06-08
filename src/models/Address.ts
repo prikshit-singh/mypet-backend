@@ -20,7 +20,7 @@ const addressSchema = new Schema<IAddress>({
   country: String,
   label: String,
   isDefault:{type:Boolean,default:false}
-});
+},{timestamps:true});
 
 const Address = model<IAddress>('Address', addressSchema);
 export default Address;

@@ -8,12 +8,12 @@ export interface IUser extends Document {
   avatar: string;
   password: string;
   role: 'individual' | 'pet_shop' | 'shelter';
-  otp?:number;
+  otp?: number;
   isVerified: boolean;
   joinedAt: string;
   bio: string;
   phone?: string;
-  rating: number|null;
+  rating: number | null;
   addresses: Types.ObjectId[]; // references Address
   licenseNumber?: string;
   establishmentYear?: string;
@@ -22,6 +22,12 @@ export interface IUser extends Document {
   state?: string;
   operatingHours?: string;
   emergencyContact?: string;
+  notification: {
+    email: boolean;
+    messages: boolean,
+    petRequests: boolean,
+    marketing: boolean,
+  }
   comparePassword: (candidate: string) => Promise<boolean>;
 }
 
@@ -31,7 +37,7 @@ const userSchema = new Schema<IUser>({
   avatar: { type: String, default: '' },
   password: { type: String, required: true },
   role: { type: String, enum: ['individual', 'pet_shop', 'shelter'], required: true },
-  otp:{type:Number,min:100000,max:999999,default:null},
+  otp: { type: Number, min: 100000, max: 999999, default: null },
   isVerified: { type: Boolean, default: false },
   joinedAt: { type: String, default: () => new Date().toISOString() },
   bio: { type: String, default: '' },
@@ -45,7 +51,13 @@ const userSchema = new Schema<IUser>({
   state: String,
   operatingHours: String,
   emergencyContact: String,
-});
+  notification: {
+    email: { type: Boolean, default: true },
+    messages: { type: Boolean, default: true },
+    petRequests: { type: Boolean, default: true },
+    marketing: { type: Boolean, default: true },
+  },
+}, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

@@ -92,7 +92,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 
-
 export const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
 
@@ -125,7 +124,6 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
         next(err)
     }
 };
-
 
 export const sendOtpController = async (req: Request, res: Response) => {
    
@@ -161,7 +159,6 @@ export const sendOtpController = async (req: Request, res: Response) => {
     }
 };
 
-
 const generateHtml = (otp:number) => {
 return `
           <!DOCTYPE html>
@@ -188,13 +185,10 @@ return `
 export const generateOTP = (): number => {
     return Math.floor(100000 + Math.random() * 900000);
   };
-  
 
 export const getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // req.user should be set by your auth middleware
-
-console.log((req as any).user)
 
       const userId = (req as any).user?.id;
   
@@ -227,4 +221,187 @@ console.log((req as any).user)
       next(err);
     }
   };
+
+export const updateCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+       res.status(401).json({
+        status: 401,
+        success: false,
+        message: 'Unauthorized: No user ID found',
+      });
+      return
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+       res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'User not found',
+      });
+      return
+    }
+
+    // Update fields one by one if present in req.body
+    if (req.body.name !== undefined) {
+      user.name = req.body.name;
+    }
+   
+    if (req.body.bio !== undefined) {
+      user.bio = req.body.bio;
+    }
+    if (req.body.phone !== undefined) {
+      user.phone = req.body.phone;
+    }
+   
+    // Handle nested notification object
+    if (req.body.notification !== undefined && typeof req.body.notification === 'object') {
+      user.notification.email = req.body.notification.email ?? user.notification.email;
+      user.notification.messages = req.body.notification.messages ?? user.notification.messages;
+      user.notification.petRequests = req.body.notification.petRequests ?? user.notification.petRequests;
+      user.notification.marketing = req.body.notification.marketing ?? user.notification.marketing;
+    }
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).select('-password');
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      user: updatedUser,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+export const updatePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+       res.status(401).json({
+        status: 401,
+        success: false,
+        message: 'Unauthorized: No user ID found',
+      });
+      return
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+       res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'Please provide currentPassword, newPassword and confirmPassword',
+      });
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+       res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'New password and confirm password do not match',
+      });
+      return
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+       res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'User not found',
+      });
+      return
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+
+    if (!isMatch) {
+       res.status(401).json({
+        status: 401,
+        success: false,
+        message: 'Current password is incorrect',
+      });
+      return
+    }
+
+    // Assign new password directly, Mongoose pre-save hook will hash it
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      message: 'Password updated successfully',
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
+
+
+export const updateProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+       res.status(401).json({
+        status: 401,
+        success: false,
+        message: 'Unauthorized: No user ID found',
+      });
+      return
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+       res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'User not found',
+      });
+      return
+    }
+
+    if (!req.file) {
+       res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'No file uploaded',
+      });
+      return
+    }
+
+    // Set the avatar field to the file path or URL
+    user.avatar = `${process.env.BASE_URL}/api/profiles/${req.file.filename}`;
+    await user.save();
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      message: 'Profile picture updated successfully',
+      avatar: user.avatar,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 

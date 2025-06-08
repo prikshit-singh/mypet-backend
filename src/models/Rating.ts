@@ -5,7 +5,6 @@ export interface IRating extends Document {
     to: Types.ObjectId;   // User who received the rating (pet owner)
     rating: number;       // Rating value (e.g., 1–5)
     comment?: string;     // Optional comment
-    createdAt: string;
 }
 
 const ratingSchema = new Schema<IRating>({
@@ -18,8 +17,7 @@ const ratingSchema = new Schema<IRating>({
         max: 5.0,
     },
     comment: { type: String },
-    createdAt: { type: String, default: () => new Date().toISOString() }
-});
+},{timestamps:true});
 
 const Rating = model<IRating>('Rating', ratingSchema);
 export default Rating;

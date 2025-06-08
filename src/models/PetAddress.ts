@@ -19,7 +19,7 @@ const petAddressSchema = new Schema<IPetAddress>({
   postalCode: String,
   country: String,
   label: String,
-});
+},{timestamps:true});
 
 const PetAddress = model<IPetAddress>('PetAddress', petAddressSchema);
 export default PetAddress;

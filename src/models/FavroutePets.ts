@@ -10,7 +10,7 @@ const favouritePetSchema = new Schema<IFavouritePet>({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   pet: { type: Schema.Types.ObjectId, ref: 'Pet', required: true },
   createdAt: { type: String, default: () => new Date().toISOString() },
-});
+},{timestamps:true});
 
 // Optional: prevent duplicate favorites (user can't favorite same pet twice)
 favouritePetSchema.index({ user: 1, pet: 1 }, { unique: true });
