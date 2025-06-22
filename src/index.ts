@@ -5,6 +5,7 @@ import connectDB from './config/db';
 import routes from './routes';
 import authRoutes from './routes/auth.routes'
 import docsRoutes from './routes/docs.routes';
+import chatRoutes from './routes/chat.routes'
 import userAddressRoute from './routes/userAddress.routes';
 import petRouter from './routes/pet.routes';
 import petRequestRouter from './routes/petRequest.routes';
@@ -12,7 +13,9 @@ import path from 'path';
 import cors from 'cors';
 import http from 'http';
 import { setupSocket } from './utils/socketServer';
-
+import User from './models/User';
+import { Server as HttpServer } from 'http';
+import { Server as IOServer } from 'socket.io';
 // Load env variables
 dotenv.config();
 
@@ -21,10 +24,18 @@ connectDB();
 
 const app = express();
 
-const server = http.createServer(app);
+const server = new HttpServer(app); // HTTP server
 
-// Setup WebSocket
-setupSocket(server);
+// ✅ Create Socket.IO server with CORS
+const io = new IOServer(server, {
+  cors: {
+    origin: '*', // Or specify allowed origins
+    methods: ['GET', 'POST'],
+  },
+});
+
+// ✅ Setup WebSocket
+setupSocket(io);
 
 
 // Middlewares
@@ -42,9 +53,26 @@ app.use('/api/auth', authRoutes);
 app.use('/api/address', userAddressRoute);
 app.use('/api/pet', petRouter);
 app.use('/api/request', petRequestRouter);
+app.use('/api/chat', chatRoutes);
 
 
 console.log('hello')
+
+// const changePassword = async () => {
+//   const user = await User.findOne({ email: 'prikshitsingh463@gmail.com' });
+
+//   if (!user) {
+//     console.log('User not found');
+//     return;
+//   }
+
+//   user.password = 'Test@1234'; // this triggers the pre-save hook
+//   await user.save(); // password gets hashed here
+
+//   console.log('Password updated and hashed:', user.password);
+// };
+// changePassword()
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -62,6 +90,6 @@ const PORT = process.env.PORT || 4000;
 
 
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running at ${process.env.BASE_URL}:${PORT}`);
 });

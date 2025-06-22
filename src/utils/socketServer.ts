@@ -1,55 +1,52 @@
-// src/socketServer.ts
-import { Server as SocketIOServer } from 'socket.io';
-import { Server as HTTPServer } from 'http';
-import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import { Server as IOServer, Socket } from 'socket.io';
+import Chat from '../models/Chat';
+import Message, { IMessage } from '../models/Message';
+import Pet from '../models/Pet';
+import { Types } from 'mongoose';
+export const setupSocket = (io: IOServer) => {
+  io.on('connection', (socket: Socket) => {
+    console.log('Connected:', socket.id);
 
-const onlineUsers = new Map<string, string>();
+    socket.on('join', (userId: string) => {
+      socket.join(userId); // User joins their personal room
+    });
 
-export const setupSocket = (httpServer: HTTPServer) => {
-  const io = new SocketIOServer(httpServer, {
-    cors: {
-      origin: '*',
-    },
-  });
+    socket.on('send_message', async ({ senderId, receiverId, petId, text }) => {
+      // Determine buyer and seller
+      const pet = await Pet.findById(petId);
+      if (!pet) return;
 
-  io.use(async (socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('Authentication error'));
+      const sellerId = pet.owner.toString();
+      const buyerId = senderId === sellerId ? receiverId : senderId;
 
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
-      const user = await User.findById(payload.id);
-      if (!user) throw new Error();
-      (socket as any).user = user;
-      next();
-    } catch (err) {
-      next(new Error('Authentication error'));
-    }
-  });
+      // Ensure fixed order: pet + buyer + seller
+      let chat = await Chat.findOne({
+        pet: petId,
+        participants: { $all: [senderId, receiverId] },
+      });
 
-  io.on('connection', (socket) => {
-    const user = (socket as any).user;
-    console.log(`User connected: ${user.name} (${user._id})`);
-
-    onlineUsers.set(user._id.toString(), socket.id);
-
-    socket.on('privateMessage', ({ toUserId, message }) => {
-      const toSocketId = onlineUsers.get(toUserId);
-      if (toSocketId) {
-        io.to(toSocketId).emit('privateMessage', {
-          fromUserId: user._id,
-          fromName: user.name,
-          avatar: user.avatar,
-          message,
-          timestamp: new Date().toISOString(),
+      if (!chat) {
+        chat = await Chat.create({
+          pet: petId,
+          participants: [senderId, receiverId],
         });
       }
+      const message: IMessage = await Message.create({
+        chat: chat._id,
+        sender: senderId,
+        text,
+      });
+
+      chat.lastMessage = message._id as Types.ObjectId;
+      await chat.save();
+
+      // Notify both participants
+      io.to(senderId).emit('receive_message', { chatId: chat._id, message });
+      io.to(receiverId).emit('receive_message', { chatId: chat._id, message });
     });
 
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${user.name}`);
-      onlineUsers.delete(user._id.toString());
+      console.log('Disconnected:', socket.id);
     });
   });
 };
