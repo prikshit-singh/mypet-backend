@@ -3,164 +3,217 @@ import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 import validateRequiredFields from '../utils/validateRequiredFields';
 import { sendEmail } from '../utils/sendEmail';
-
+import { forgotPasswordVerifyUrlContent, emailVerifyUrlContent } from '../utils/htmlContent';
+export interface AuthRequest extends Request {
+  user?: any; // You can type this more specifically if needed
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 const JWT_EXPIRES_IN = '7d'; // Token validity
-
+const FrontEnd_URL = process.env.FrontEnd_URL || 'www.gitgurus.com'
 // Generate token
 const generateToken = (userId: string) =>
-    jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
 // ✅ Signup
 export const signup = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+  try {
 
 
-        const requiredFields = ['name', 'email', 'password', 'role'];
-        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+    const requiredFields = ['name', 'email', 'password', 'role'];
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
 
-        if (!success) {
-            res.status(400).json({
-                status: 400,
-                success: false,
-                message: `Missing required fields: ${missingFields?.join(', ')}`,
-            });
-            return
-        }
-
-        const { name, email, password, role } = req.body;
-
-        const existing = await User.findOne({ email });
-        if (existing) {
-            res.status(400).json({ status: 400, success: false, message: 'Email already in use' })
-            return
-        };
-
-        const otp = generateOTP()
-        const htmlContent = generateHtml(otp)
-        const user: IUser = await User.create({ name, email, password, role,otp, });
-
-        const result = await sendEmail({ email, name, subject: "Email verification" as string, htmlContent });
-        res.status(201).json({ status: 201, success: true, result, message: 'Otp send to your email.' });
-    } catch (err) {
-        next(err)
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
     }
-};
 
+    const { name, email, password, role } = req.body;
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      res.status(400).json({ status: 400, success: false, message: 'Email already in use' })
+      return
+    };
+
+    const user: IUser = await User.create({ name, email, password, role });
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        tokenType: "verify-account",
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    const verificationUrl = `${FrontEnd_URL}/verify-account?token=${token}`;
+    const htmlContent = emailVerifyUrlContent(verificationUrl);
+
+    await sendEmail(
+      {
+        email: user.email,
+        name: user.name,
+        subject: "Verify account",
+        htmlContent
+      }
+
+    );
+    const result = await sendEmail(
+      {
+        email: user.email,
+        name: user.name,
+        subject: "Verify account",
+        htmlContent
+      }
+
+    );
+    res.status(201).json({ status: 201, success: true, result, message: 'Otp send to your email.' });
+  } catch (err) {
+    next(err)
+  }
+};
 // ✅ Login
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+  try {
 
-        const requiredFields = ['email', 'password'];
-        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+    const requiredFields = ['email', 'password'];
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
 
-        if (!success) {
-            res.status(400).json({
-                status: 400,
-                success: false,
-                message: `Missing required fields: ${missingFields?.join(', ')}`,
-            });
-            return
-        }
-
-        const { email, password } = req.body;
-
-        const user = await User.findOne({ email });
-        if (!user) {
-
-            res.status(400).json({ status: 400, success: false, message: 'User not found' });
-            return
-        };
-
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
-
-            res.status(400).json({ status: 400, success: false, message: 'Invalid credentials' });
-            return
-        };
-
-        if(!user.isVerified){
-            res.status(400).json({ status: 400, success: false, message: 'Email not verified' });
-            return 
-        }
-
-        const token = generateToken(user._id.toString());
-        res.status(200).json({ status: 200, success: true, token, user });
-    } catch (err) {
-        next(err)
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
     }
+
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+
+      res.status(400).json({ status: 400, success: false, message: 'User not found' });
+      return
+    };
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+
+      res.status(400).json({ status: 400, success: false, message: 'Invalid credentials' });
+      return
+    };
+
+    if (!user.isVerified) {
+
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          tokenType: "verify-account",
+        },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      const verificationUrl = `${FrontEnd_URL}/verify-account?token=${token}`;
+      const htmlContent = emailVerifyUrlContent(verificationUrl);
+
+      await sendEmail(
+        {
+          email: user.email,
+          name: user.name,
+          subject: "Verify account",
+          htmlContent
+        }
+      )
+      res.status(400).json({ status: 400, success: false, message: 'Email not verified. We sent an verify account url to your email.' });
+      return
+    }
+
+    const token = generateToken(user._id.toString());
+    res.status(200).json({ status: 200, success: true, token, user });
+  } catch (err) {
+    next(err)
+  }
 };
 
-
 export const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+  try {
 
-        const requiredFields = ['email', 'otp'];
-        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
+    const requiredFields = ['email', 'otp'];
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
 
-        if (!success) {
-            res.status(400).json({
-                status: 400,
-                success: false,
-                message: `Missing required fields: ${missingFields?.join(', ')}`,
-            });
-            return
-        }
-
-        const { email, otp } = req.body;
-
-        const user = await User.findOne({ email });
-        if (!user) {
-            res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
-            return
-        };
-        if(otp !== user.otp){
-            res.status(400).json({ status: 400, success: false, message: 'Invalid otp' });
-            return 
-        }
-        const userUpdate = await User.findOneAndUpdate({ email },{isVerified:true,otp:null});
-        res.status(200).json({ status: 200, success: true,message:"Otp verified successfully" });
-    } catch (err) {
-        next(err)
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
     }
+
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
+      return
+    };
+    if (otp !== user.otp) {
+      res.status(400).json({ status: 400, success: false, message: 'Invalid otp' });
+      return
+    }
+    const userUpdate = await User.findOneAndUpdate({ email }, { isVerified: true, otp: null });
+    res.status(200).json({ status: 200, success: true, message: "Otp verified successfully" });
+  } catch (err) {
+    next(err)
+  }
 };
 
 export const sendOtpController = async (req: Request, res: Response) => {
-   
 
-    try {
 
-        const requiredFields = ['email'];
-        const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
-    
-        if (!success) {
-            res.status(400).json({
-                status: 400,
-                success: false,
-                message: `Missing required fields: ${missingFields?.join(', ')}`,
-            });
-            return
-        }
-    
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
-            return
-        };
+  try {
 
-        const otp = generateOTP()
-        const htmlContent = generateHtml(otp)
+    const requiredFields = ['email'];
+    const { success, missingFields } = validateRequiredFields(requiredFields, req.body);
 
-        const result = await sendEmail({ email, name:user.name, subject: "Email verification" as string, htmlContent });
-        res.status(200).json({ message: 'Email sent', data: result });
-    } catch (error: any) {
-        res.status(500).json({ message: error.message || 'Failed to send email' });
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
     }
+
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(400).json({ status: 400, success: false, message: 'Invalid email' });
+      return
+    };
+
+    const otp = generateOTP()
+    const htmlContent = generateHtml(otp)
+
+    const result = await sendEmail({ email, name: user.name, subject: "Email verification" as string, htmlContent });
+    res.status(200).json({ message: 'Email sent', data: result });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Failed to send email' });
+  }
 };
 
-const generateHtml = (otp:number) => {
-return `
+const generateHtml = (otp: number) => {
+  return `
           <!DOCTYPE html>
           <html>
             <head>
@@ -183,51 +236,51 @@ return `
 }
 
 export const generateOTP = (): number => {
-    return Math.floor(100000 + Math.random() * 900000);
-  };
+  return Math.floor(100000 + Math.random() * 900000);
+};
 
 export const getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // req.user should be set by your auth middleware
+  try {
+    // req.user should be set by your auth middleware
 
-      const userId = (req as any).user?.id;
-  
-      if (!userId) {
-         res.status(401).json({
-          status: 401,
-          success: false,
-          message: 'Unauthorized: No user ID found',
-        });
-        return
-      }
-  
-      const user = await User.findById(userId).select('-password'); // Don't send password
-  
-      if (!user) {
-         res.status(404).json({
-          status: 404,
-          success: false,
-          message: 'User not found',
-        });
-        return
-      }
-  
-      res.status(200).json({
-        status: 200,
-        success: true,
-        user,
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        status: 401,
+        success: false,
+        message: 'Unauthorized: No user ID found',
       });
-    } catch (err) {
-      next(err);
+      return
     }
-  };
+
+    const user = await User.findById(userId).select('-password'); // Don't send password
+
+    if (!user) {
+      res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'User not found',
+      });
+      return
+    }
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      user,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const updateCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user?.id;
 
     if (!userId) {
-       res.status(401).json({
+      res.status(401).json({
         status: 401,
         success: false,
         message: 'Unauthorized: No user ID found',
@@ -238,7 +291,7 @@ export const updateCurrentUser = async (req: Request, res: Response, next: NextF
     const user = await User.findById(userId);
 
     if (!user) {
-       res.status(404).json({
+      res.status(404).json({
         status: 404,
         success: false,
         message: 'User not found',
@@ -250,14 +303,14 @@ export const updateCurrentUser = async (req: Request, res: Response, next: NextF
     if (req.body.name !== undefined) {
       user.name = req.body.name;
     }
-   
+
     if (req.body.bio !== undefined) {
       user.bio = req.body.bio;
     }
     if (req.body.phone !== undefined) {
       user.phone = req.body.phone;
     }
-   
+
     // Handle nested notification object
     if (req.body.notification !== undefined && typeof req.body.notification === 'object') {
       user.notification.email = req.body.notification.email ?? user.notification.email;
@@ -287,7 +340,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
     const userId = (req as any).user?.id;
 
     if (!userId) {
-       res.status(401).json({
+      res.status(401).json({
         status: 401,
         success: false,
         message: 'Unauthorized: No user ID found',
@@ -298,7 +351,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-       res.status(400).json({
+      res.status(400).json({
         status: 400,
         success: false,
         message: 'Please provide currentPassword, newPassword and confirmPassword',
@@ -307,7 +360,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
     }
 
     if (newPassword !== confirmPassword) {
-       res.status(400).json({
+      res.status(400).json({
         status: 400,
         success: false,
         message: 'New password and confirm password do not match',
@@ -318,7 +371,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
     const user = await User.findById(userId);
 
     if (!user) {
-       res.status(404).json({
+      res.status(404).json({
         status: 404,
         success: false,
         message: 'User not found',
@@ -329,7 +382,7 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
     const isMatch = await user.comparePassword(currentPassword);
 
     if (!isMatch) {
-       res.status(401).json({
+      res.status(401).json({
         status: 401,
         success: false,
         message: 'Current password is incorrect',
@@ -353,15 +406,123 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
 };
 
 
+export const sendForgetPasswordUrl = async (req: Request, res: Response) => {
+  try {
+    const required = ["email"];
+    console.log('req.body', req.body)
+
+    const { success, missingFields } = validateRequiredFields(required, req.body);
+
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
+    }
+
+    const { email } = req.body;
 
 
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new Error("User not exist.");
+    }
+
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        tokenType: "reset-password",
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    const verificationUrl = `${FrontEnd_URL}/reset-password?token=${token}`;
+    const htmlContent = forgotPasswordVerifyUrlContent(verificationUrl);
+
+    await sendEmail(
+      {
+        email: user.email,
+        name: user.name,
+        subject: "Forgot password",
+        htmlContent
+      }
+
+    );
+    res.status(200).json({
+      status: true,
+      message:
+        "Please verify your email address by clicking the link we just sent you.",
+    });
+  } catch (error) {
+    console.error("resendVerifyUrl error:", error);
+    res.status(500).json({ status: false, message: "Server error" });
+  }
+};
+
+export const resetPasswordwithToken = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, email, role, tokenType } = req.user;
+
+    if (tokenType !== "reset-password") {
+      res.status(400).json({ status: false, message: "Invalid token type" });
+      return;
+    }
+
+    const required = ["newPassword"];
+    console.log('req.body', req.body)
+
+    const { success, missingFields } = validateRequiredFields(required, req.body);
+
+    if (!success) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Missing required fields: ${missingFields?.join(', ')}`,
+      });
+      return
+    }
+
+
+    const { newPassword } = req.body
+
+    let user: any = await User.findOne({ _id: id, email });;
+
+    if (!user) {
+      res.status(404).json({ status: false, message: "User not found" });
+      return;
+    }
+
+    const isMatch = await user.comparePassword(newPassword);
+    if (isMatch) {
+      res.status(400).json({ status: 400, success: false, message: 'Please choose a different password.' });
+      return
+    };
+    user.password = newPassword
+    await user.save();
+    res
+      .status(200)
+      .json({ status: true, message: "Password updated successfully" });
+  } catch (error) {
+    console.error("verifyEmailToken error:", error);
+    res
+      .status(400)
+      .json({ status: false, message: "Invalid or expired token" });
+  }
+};
 
 export const updateProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user?.id;
 
     if (!userId) {
-       res.status(401).json({
+      res.status(401).json({
         status: 401,
         success: false,
         message: 'Unauthorized: No user ID found',
@@ -372,7 +533,7 @@ export const updateProfilePicture = async (req: Request, res: Response, next: Ne
     const user = await User.findById(userId);
 
     if (!user) {
-       res.status(404).json({
+      res.status(404).json({
         status: 404,
         success: false,
         message: 'User not found',
@@ -381,7 +542,7 @@ export const updateProfilePicture = async (req: Request, res: Response, next: Ne
     }
 
     if (!req.file) {
-       res.status(400).json({
+      res.status(400).json({
         status: 400,
         success: false,
         message: 'No file uploaded',
@@ -402,6 +563,42 @@ export const updateProfilePicture = async (req: Request, res: Response, next: Ne
   } catch (err) {
     next(err);
   }
+};
+
+export const verifyEmailToken = async (req: AuthRequest, res: Response) => {
+	try {
+		const { id, email, role, tokenType } = req.user;
+
+		if (tokenType !== "verify-account") {
+			res.status(400).json({ status: false, message: "Invalid token type" });
+			return;
+		}
+
+		let user: any = await User.findOne({ _id: id, email });;
+
+		
+		if (!user) {
+			res.status(404).json({ status: false, message: "User not found" });
+			return;
+		}
+
+		if (user.isVerified) {
+			res.status(200).json({ status: true, message: "Email already verified" });
+			return;
+		}
+
+		user.isVerified = true;
+		await user.save();
+		
+		res
+			.status(200)
+			.json({ status: true, message: "Email verified successfully." });
+	} catch (error) {
+		console.error("verifyEmailToken error:", error);
+		res
+			.status(400)
+			.json({ status: false, message: "Invalid or expired token" });
+	}
 };
 
 
