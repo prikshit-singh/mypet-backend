@@ -34,7 +34,7 @@ export const createPet = async (req: Request, res: Response, next: NextFunction)
       return;
     }
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
-      return `${process.env.BASE_URL}/api/petimages/${file.filename}`;
+      return `/api/petimages/${file.filename}`;
     }) || [];
 
 

@@ -22,7 +22,6 @@ const storage = multer.diskStorage({
 const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'];
   if (allowedTypes.includes(file.mimetype)) {
-    console.log(2, file)
     cb(null, true);
   } else {
     cb(new Error('Unsupported file type.'), false);
