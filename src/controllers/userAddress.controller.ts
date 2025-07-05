@@ -23,6 +23,33 @@ export const createUserAddress = async (req: Request, res: Response, next: NextF
     const { street, city, state, postalCode, country, label, isDefault } = req.body;
     const { id, userType } = (req as any).user;
 
+    const normalizedCountry = country || 'INDIA';
+
+    // ✅ Check if address already exists for the user
+    const existingAddress = await Address.findOne({
+      userId: id,
+      street,
+      city,
+      state,
+      postalCode,
+      country: normalizedCountry
+    });
+
+    if (existingAddress) {
+       res.status(409).json({
+        status: 409,
+        success: false,
+        message: 'This address already exists.',
+      });
+      return
+    }
+
+
+    const existingAddressCount = await Address.countDocuments({ userId: id });
+
+    // 🧠 If this is the first address, force it as default
+    const setDefault = existingAddressCount === 0 ? true : !!isDefault;
+
 
 
     // 👉 If the new address is default, update all previous addresses to isDefault: false
@@ -41,7 +68,7 @@ export const createUserAddress = async (req: Request, res: Response, next: NextF
       postalCode,
       country: country ? country : "INDIA",
       label: label ? label : userType,
-      isDefault: isDefault ? isDefault : false
+      isDefault: setDefault
     });
 
     await User.findByIdAndUpdate(id, {
@@ -49,7 +76,7 @@ export const createUserAddress = async (req: Request, res: Response, next: NextF
     });
 
     res.status(201).json({
-      status: 400,
+      status: 201,
       success: false,
       message: `Address saved successfully.`,
       data: address
@@ -63,7 +90,8 @@ export const createUserAddress = async (req: Request, res: Response, next: NextF
 export const getUserAddresses = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = (req as any).user;
-    const addresses = await Address.find({ userId: id }).sort({ isDefault: -1 });
+    const addresses = await Address.find({ userId: id })
+      .sort({ isDefault: -1, createdAt: -1 });
     res.status(200).json({
       status: 400,
       success: true,

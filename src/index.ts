@@ -11,9 +11,7 @@ import petRouter from './routes/pet.routes';
 import petRequestRouter from './routes/petRequest.routes';
 import path from 'path';
 import cors from 'cors';
-import http from 'http';
 import { setupSocket } from './utils/socketServer';
-import User from './models/User';
 import { Server as HttpServer } from 'http';
 import { Server as IOServer } from 'socket.io';
 // Load env variables

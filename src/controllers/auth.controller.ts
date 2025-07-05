@@ -431,6 +431,15 @@ export const sendForgetPasswordUrl = async (req: Request, res: Response) => {
       throw new Error("User not exist.");
     }
 
+    if(!user.isVerified){
+       res.status(400).json({
+        status: 400,
+        success: false,
+        message: `Please verify your account first.`,
+      });
+      return
+    }
+
 
     const token = jwt.sign(
       {

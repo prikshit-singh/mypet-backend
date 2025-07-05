@@ -7,6 +7,10 @@ import { AuthRequest } from '../middleware/auth';
 import Rating from '../models/Rating';
 import User from '../models/User';
 import dotenv from 'dotenv';
+import Address from '../models/Address';
+import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 // Load env variables
 dotenv.config();
 
@@ -33,6 +37,31 @@ export const createPet = async (req: Request, res: Response, next: NextFunction)
       });
       return;
     }
+
+
+    const { address } = req.body;
+
+    // ✅ Validate address ID
+    if (!mongoose.Types.ObjectId.isValid(address)) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'Invalid address ID',
+      });
+      return
+    }
+
+    const addressDoc = await Address.findById(address);
+    if (!addressDoc) {
+      res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'Address not found',
+      });
+      return
+    }
+
+
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
       return `/api/petimages/${file.filename}`;
     }) || [];
@@ -48,7 +77,8 @@ export const createPet = async (req: Request, res: Response, next: NextFunction)
       pet,
     });
   } catch (err) {
-    console.log(err)
+    const files = req.files as Express.Multer.File[] | undefined;
+    deleteFiles(files);
     next(err); // 🔥 Send to global error handler
   }
 };
@@ -207,7 +237,11 @@ export const getSinglePetByUserId = async (req: AuthRequest, res: Response, next
 export const getFavouritePetByUserId = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
 
-    let pet: any = await FavouritePet.find({ userId: req.user._id }).populate('pet');
+    console.log(1234,req.user)
+
+    let pet: any = await FavouritePet.find({ user: req.user.id }).populate('pet');
+    console.log(pet)
+
     if (!pet) {
       res.status(404).json({
         status: 404,
@@ -251,6 +285,32 @@ export const updatePet = async (req: Request, res: Response, next: NextFunction)
       });
       return;
     }
+
+    const { address } = req.body;
+
+    // ✅ Validate address ID
+    if (!mongoose.Types.ObjectId.isValid(address)) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'Invalid address ID',
+      });
+      return
+    }
+
+    // ✅ Check if address exists
+    const addressDoc = await Address.findById(address);
+    if (!addressDoc) {
+      res.status(404).json({
+        status: 404,
+        success: false,
+        message: 'Address not found',
+      });
+      return
+    }
+
+
+
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
       return `${process.env.BASE_URL}/api/petimages/${file.filename}`;
     }) || [];
@@ -283,7 +343,19 @@ export const updatePet = async (req: Request, res: Response, next: NextFunction)
       pet,
     });
   } catch (err) {
+    const files = req.files as Express.Multer.File[] | undefined;
+    deleteFiles(files);
     next(err);
+  }
+};
+
+const deleteFiles = (files?: Express.Multer.File[]) => {
+  if (!files?.length) return;
+  for (const file of files) {
+    const filePath = path.join(__dirname, '../../petimages', file.filename);
+    fs.unlink(filePath, (err) => {
+      if (err) console.error(`Failed to delete ${file.filename}:`, err);
+    });
   }
 };
 
