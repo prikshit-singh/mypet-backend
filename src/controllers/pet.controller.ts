@@ -312,7 +312,7 @@ export const updatePet = async (req: Request, res: Response, next: NextFunction)
 
 
     const imageUrls = (req.files as Express.Multer.File[] | undefined)?.map((file) => {
-      return `${process.env.BASE_URL}/api/petimages/${file.filename}`;
+      return `/api/petimages/${file.filename}`;
     }) || [];
 
     const existingPet = await Pet.findById(req.params.id);

@@ -560,7 +560,7 @@ export const updateProfilePicture = async (req: Request, res: Response, next: Ne
     }
 
     // Set the avatar field to the file path or URL
-    user.avatar = `${process.env.BASE_URL}/api/profiles/${req.file.filename}`;
+    user.avatar = `/api/profiles/${req.file.filename}`;
     await user.save();
 
     res.status(200).json({
