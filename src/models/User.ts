@@ -13,6 +13,7 @@ export interface IUser extends Document {
   joinedAt: string;
   bio: string;
   phone?: string;
+   
   rating: number | null;
   addresses: Types.ObjectId[]; // references Address
   licenseNumber?: string;

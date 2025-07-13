@@ -1,9 +1,10 @@
 import express from 'express';
-import { login, signup, sendOtpController,verifyOtp, getCurrentUser,updateCurrentUser,updatePassword , updateProfilePicture,sendForgetPasswordUrl,resetPasswordwithToken,verifyEmailToken} from '../controllers/auth.controller';
+import { login, signup, sendOtpController,verifyOtp, getCurrentUser,updateCurrentUser,updatePassword , updateProfilePicture,sendForgetPasswordUrl,resetPasswordwithToken,verifyEmailToken,socialLogin} from '../controllers/auth.controller';
 import authenticateToken from '../middleware/auth';
 import { uploadProfileImage } from '../utils/uploadUserProfile';
 
 const router = express.Router();
+router.post('/google', socialLogin);
 
 router.post('/signup', signup);
 router.post('/login', login);

@@ -4,9 +4,11 @@ import User, { IUser } from '../models/User';
 import validateRequiredFields from '../utils/validateRequiredFields';
 import { sendEmail } from '../utils/sendEmail';
 import { forgotPasswordVerifyUrlContent, emailVerifyUrlContent } from '../utils/htmlContent';
+import { OAuth2Client } from 'google-auth-library';
 export interface AuthRequest extends Request {
   user?: any; // You can type this more specifically if needed
 }
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 const JWT_EXPIRES_IN = '7d'; // Token validity
 const FrontEnd_URL = process.env.FrontEnd_URL || 'www.gitgurus.com'
@@ -609,5 +611,109 @@ export const verifyEmailToken = async (req: AuthRequest, res: Response) => {
 			.json({ status: false, message: "Invalid or expired token" });
 	}
 };
+export const socialLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { provider, token } = req.body;
+
+    console.log(provider, token)
+
+    if ( !token) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'Token are required',
+      });
+       return
+    }
+
+   
+
+    // Verify Google Token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email || !payload.name) {
+      res.status(400).json({
+        status: 400,
+        success: false,
+        message: 'Invalid Google token',
+      });
+       return
+    }
+
+    // Check user existence
+    let user = await User.findOne({ email: payload.email });
+    // Example usage:
+const dummyPassword = generateDummyPassword();
+console.log(dummyPassword); // e.g., "L8@ybc#z"
+    if (!user) {
+  user = new User({
+    name: payload.name,
+    email: payload.email,
+    isVerified: true,
+    avatar: payload.picture,
+    role: 'individual', // or your default role
+    password: dummyPassword,
+  });
+
+  await user.save(); // This will trigger the pre-save hook and hash the password
+}
+
+
+    const authToken = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.status(200).json({
+      status: 200,
+      success: true,
+      token: authToken,
+      user,
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    next(err);
+  }
+};
+function generateDummyPassword(): string {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*()-_=+[]{};:,.<>?';
+
+  const all = upper + lower + numbers + symbols;
+
+  const getRandom = (str: string) =>
+    str[Math.floor(Math.random() * str.length)];
+
+  // Ensure it includes at least one from each required category
+  const password = [
+    getRandom(upper),
+    getRandom(numbers),
+    getRandom(symbols),
+    getRandom(lower),
+    getRandom(all),
+    getRandom(all),
+    getRandom(all),
+    getRandom(all),
+  ];
+
+  // Shuffle the result to avoid predictable pattern
+  return password
+    .sort(() => Math.random() - 0.5)
+    .join('');
+}
+
+
 
 
